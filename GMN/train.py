@@ -122,8 +122,7 @@ for i_iter in range(config['training']['n_training_steps']):
         # reset the metrics
         accumulated_metrics = collections.defaultdict(list)
 
-        if ((i_iter + 1) // config['training']['print_after'] %
-                config['training']['eval_after'] == 0):
+        if ((i_iter + 1) // config['training']['print_after'] % config['training']['eval_after'] == 0):
             model.eval()
             with torch.no_grad():
                 accumulated_pair_auc = []
@@ -165,3 +164,7 @@ for i_iter in range(config['training']['n_training_steps']):
         print('iter %d, %s, time %.2fs' % (
             i_iter + 1, info_str, time.time() - t_start))
         t_start = time.time()
+
+print('Training finished.')
+print('Saving model to %s' % config['model_file'])
+torch.save(model.state_dict(), config['model_file'])
