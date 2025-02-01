@@ -63,12 +63,18 @@ for i_iter in range(config['training']['n_training_steps']):
         labels = labels.to(device)
     else:
         node_features, edge_features, from_idx, to_idx, graph_idx = get_graph(batch)
-    graph_vectors = model(node_features.to(device), edge_features.to(device), from_idx.to(device), to_idx.to(device),
-                          graph_idx.to(device), training_n_graphs_in_batch)
+    graph_vectors = model(node_features.to(device),
+                          edge_features.to(device),
+                          from_idx.to(device),
+                          to_idx.to(device),
+                          graph_idx.to(device),
+                          training_n_graphs_in_batch)
 
     if config['training']['mode'] == 'pair':
         x, y = reshape_and_split_tensor(graph_vectors, 2)
-        loss = pairwise_loss(x, y, labels,
+        loss = pairwise_loss(x,
+                             y,
+                             labels,
                              loss_type=config['training']['loss'],
                              margin=config['training']['margin'])
 
@@ -81,7 +87,10 @@ for i_iter in range(config['training']['n_training_steps']):
         sim_neg = torch.sum(sim * is_neg) / (n_neg + 1e-8)
     else:
         x_1, y, x_2, z = reshape_and_split_tensor(graph_vectors, 4)
-        loss = triplet_loss(x_1, y, x_2, z,
+        loss = triplet_loss(x_1,
+                            y,
+                            x_2,
+                            z,
                             loss_type=config['training']['loss'],
                             margin=config['training']['margin'])
 
@@ -104,7 +113,6 @@ for i_iter in range(config['training']['n_training_steps']):
     accumulated_metrics['sim_neg'].append(sim_neg)
     accumulated_metrics['sim_diff'].append(sim_diff)
 
-
     # evaluation
     if (i_iter + 1) % config['training']['print_after'] == 0:
         metrics_to_print = {
@@ -122,7 +130,9 @@ for i_iter in range(config['training']['n_training_steps']):
                 for batch in validation_set.pairs(config['evaluation']['batch_size']):
                     node_features, edge_features, from_idx, to_idx, graph_idx, labels = get_graph(batch)
                     labels = labels.to(device)
-                    eval_pairs = model(node_features.to(device), edge_features.to(device), from_idx.to(device),
+                    eval_pairs = model(node_features.to(device),
+                                       edge_features.to(device),
+                                       from_idx.to(device),
                                        to_idx.to(device),
                                        graph_idx.to(device), config['evaluation']['batch_size'] * 2)
 
@@ -134,7 +144,9 @@ for i_iter in range(config['training']['n_training_steps']):
                 accumulated_triplet_acc = []
                 for batch in validation_set.triplets(config['evaluation']['batch_size']):
                     node_features, edge_features, from_idx, to_idx, graph_idx = get_graph(batch)
-                    eval_triplets = model(node_features.to(device), edge_features.to(device), from_idx.to(device),
+                    eval_triplets = model(node_features.to(device),
+                                          edge_features.to(device),
+                                          from_idx.to(device),
                                           to_idx.to(device),
                                           graph_idx.to(device),
                                           config['evaluation']['batch_size'] * 4)

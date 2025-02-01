@@ -3,6 +3,7 @@ import contextlib
 import random
 import collections
 import copy
+import torch
 
 import numpy as np
 import networkx as nx
@@ -200,19 +201,42 @@ class GraphEditDistanceDataset(GraphSimilarityDataset):
         to_idx = []
         graph_idx = []
 
+        k = 8
         n_total_nodes = 0
         n_total_edges = 0
+        node_features_eigen = torch.ones((0, k), dtype=torch.float32)
         for i, g in enumerate(graphs):
             n_nodes = g.number_of_nodes()
             n_edges = g.number_of_edges()
             edges = np.array(g.edges(), dtype=np.int32)
+            laplacian_adj = nx.laplacian_matrix(g).todense()
+
+            # compute eigenvalues and eigenvectors from laplacian
+            eigenvalues, eigenvectors = np.linalg.eigh(laplacian_adj)
+
+            # sort eigenvalues and eigenvectors
+            idx = eigenvalues.argsort()
+            eigenvalues = eigenvalues[idx]
+            eigenvectors = eigenvectors[:, idx]
+
+            # select the first k eigenvectors
+            selected_eigenvectors = eigenvectors[:, :k]
+
             # shift the node indices for the edges
             from_idx.append(edges[:, 0] + n_total_nodes)
             to_idx.append(edges[:, 1] + n_total_nodes)
             graph_idx.append(np.ones(n_nodes, dtype=np.int32) * i)
+            node_features_eigen = torch.cat(
+                [node_features_eigen, torch.tensor(selected_eigenvectors, dtype=torch.float32)], dim=0
+            )
 
             n_total_nodes += n_nodes
             n_total_edges += n_edges
+
+        if True:
+            node_features = torch.ones((n_total_nodes, k), dtype=torch.float32)
+        else:
+            node_features = copy.copy(node_features_eigen)
 
         GraphData = collections.namedtuple('GraphData', [
             'from_idx',
@@ -228,8 +252,8 @@ class GraphEditDistanceDataset(GraphSimilarityDataset):
             # this task only cares about the structures, the graphs have no features.
             # setting higher dimension of ones to confirm code functioning
             # with high dimensional features.
-            node_features=np.ones((n_total_nodes, 8), dtype=np.float32),
-            edge_features=np.ones((n_total_edges, 4), dtype=np.float32),
+            node_features=np.ones((n_total_nodes, k), dtype=np.float32),
+            edge_features=np.ones((n_total_edges, k//2), dtype=np.float32),
             graph_idx=np.concatenate(graph_idx, axis=0),
             n_graphs=len(graphs),
         )
